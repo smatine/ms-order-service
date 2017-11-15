@@ -12,6 +12,7 @@ import javax.ws.rs.core.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,7 +39,11 @@ import com.sg.microservices.order.service.IOrderService;
 public class OrderRestServiceController {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OrderRestServiceController.class);
+	
+	private static final Logger eslogger = LoggerFactory.getLogger("es-logger");
    
+	@Autowired
+	Tracer tracer;
 	
 	@Autowired
 	private IOrderService orderService;
@@ -72,6 +77,8 @@ public class OrderRestServiceController {
 	@RequestMapping(value="/test", method = RequestMethod.GET)
 	@CrossOrigin
 	public String testService(){
+		eslogger.info("Inside Order service Test Method");
+		eslogger.info("Correlation_id is "  +  tracer.getCurrentSpan().traceIdString());
 		return "Order-Service Sucess";
 	}
 	
@@ -107,6 +114,7 @@ public class OrderRestServiceController {
 						orderService.savenewOrder(orderObj);
 						LOGGER.info("JWT Token Validataion Sucessful in OrderService.");
 						LOGGER.info("new Order Deatils saved Sucessfully");
+						eslogger.info("New Sale Made");
 						updateQuantity(productId, quantity);
 						resultObj = orderObj;
 					}
@@ -125,7 +133,7 @@ public class OrderRestServiceController {
 		 RestTemplate restTemplate = new RestTemplate();
 		try {
 
-			Product productObj = restTemplate.getForObject("http://localhost:8084/products/id/"+productId,Product.class,productId);
+			Product productObj = restTemplate.getForObject("http://172.17.183.84:8084/products/id/"+productId,Product.class,productId);
 			LOGGER.info("Product Obj  ::::" + productObj.toString());
 			int availableItems = productObj.getAvailableitems();
 			int currentCount = availableItems - quantity;
@@ -133,7 +141,7 @@ public class OrderRestServiceController {
 			LOGGER.info("After set available items Product Obj  ::::"+ productObj.getAvailableitems());
 			/* posting updated product Object */
 
-			restTemplate.postForObject("http://localhost:8084/products/updatequantity",productObj,Product.class);
+			restTemplate.postForObject("http://localhost:8084/172.17.183.84/updatequantity",productObj,Product.class);
 
 		}
 
